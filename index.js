@@ -26,6 +26,13 @@ function getPackages(options) {
   }
   if (options.smartDetection) {
     enrich = true;
+    // Map options to objects containing a key (the name of the property we want
+    // to check) and a value (a regular expression built from the property
+    // value found in the module parent's package.json)
+    // Example:
+    // ["author.name"]
+    // becomes
+    // [{ key: "author.name", value: /Joe Bloggs/i }]
     options.smartDetection = _.filter(_.map(options.smartDetection, function(option) {
       if (_.has(packagesJson, option)) {
         return {
@@ -40,6 +47,7 @@ function getPackages(options) {
     });
   }
   if (enrich) {
+    // Enrich the packages with an isPrivate flag if necessary
     packages = enrichPrivatePackages(packages, options);
   }
   return packages;
@@ -47,7 +55,10 @@ function getPackages(options) {
 
 function enrichPrivatePackages(packages, options) {
   if (options.smartDetection) {
+    // Run smart detection rules on each package and set isPrivate to true if
+    // any rules evaluate to true
     _.each(packages, function(package) {
+      // Load the package.json for this package
       var packageJson = require(path.resolve(parentDir, 'node_modules', package.name, 'package.json'));
       _.each(options.smartDetection, function(option) {
         if (option.value.test(_.get(packageJson, option.key))) {
@@ -57,6 +68,8 @@ function enrichPrivatePackages(packages, options) {
     });
   }
   if (options.privatePattern) {
+    // Test the package name for the privatePattern and set isPrivate to true if
+    // any rules evaluate to true
     _.each(packages, function(package) {
       package.isPrivate = options.privatePattern.test(package.name);
     });
@@ -66,6 +79,8 @@ function enrichPrivatePackages(packages, options) {
 
 function isPrivate(userRequest, options) {
   if (!options.smartDetection && !options.privatePattern) {
+    // Don't run any private detection rules if smartDetection or privatePattern
+    // are not specified in the options
     return false;
   }
   return _.findIndex(_.values(packages), function(package) {
@@ -76,12 +91,14 @@ function isPrivate(userRequest, options) {
 }
 
 function isExternal(module, options) {
+  // Detect if a module is private according to various rules
   var userRequest = module.userRequest;
   if (typeof(userRequest) !== 'string') {
     return false;
   }
   options = _.merge(DEFAULT_OPTIONS, options);
   if (!packages) {
+    // Set the global packages if they haven't already been worked out manually
     packages = getPackages(options);
   }
   return /node_modules/.test(userRequest) && !isPrivate(userRequest, options);
