@@ -1,31 +1,94 @@
 var path = require('path');
 var _ = require('lodash');
-var packages = getParentPackages();
 
-function getParentPackages() {
-  var parentDir = path.dirname(module.parent.filename);
+var packages = null;
+var parentDir = path.dirname(module.parent.filename);
+
+function getPackages(options) {
+  options = _.merge({
+    privatePattern: false,
+    smartDetection: false
+  }, options);
   var packagesJson = require(path.resolve(parentDir, 'package.json'));
   var packages = _.merge(packagesJson.dependencies, packagesJson.devDependencies);
+  packages = _.map(packages, function(val, key) {
+    return {
+      name: key,
+      version: val,
+      isPrivate: false
+    };
+  });
+  var enrich = false;
+  if (options.privatePattern) {
+    enrich = true;
+  }
+  if (options.smartDetection) {
+    enrich = true;
+    options.smartDetection = _.filter(_.map(options.smartDetection, function(option) {
+      if (_.has(packagesJson, option)) {
+        return {
+          key: option,
+          value: new RegExp(_.get(packagesJson, option), 'i')
+        };
+      } else {
+        return null;
+      }
+    }), function(option) {
+      return option !== null;
+    });
+  }
+  if (enrich) {
+    packages = enrichPrivatePackages(packages, options);
+  }
   return packages;
 }
 
-function isPrivate(userRequest, pattern) {
-  return _.findIndex(_.keys(packages), function(key) {
-    if (pattern.test(userRequest)) {
+function enrichPrivatePackages(packages, options) {
+  if (options.smartDetection) {
+    _.each(packages, function(package) {
+      var packageJson = require(path.resolve(parentDir, 'node_modules', package.name, 'package.json'));
+      _.each(options.smartDetection, function(option) {
+        if (option.value.test(_.get(packageJson, option.key))) {
+          package.isPrivate = true;
+        }
+      });
+    });
+  }
+  if (options.privatePattern) {
+    _.each(packages, function(package) {
+      package.isPrivate = options.privatePattern.test(package.name);
+    });
+  }
+  return packages;
+}
+
+function isPrivate(userRequest, options) {
+  if (!options.smartDetection && !options.privatePattern) {
+    return false;
+  }
+  return _.findIndex(_.values(packages), function(package) {
+    if (new RegExp('node_modules\/' + package.name).test(userRequest)) {
+      return package.isPrivate;
     }
-    return pattern.test(userRequest);
   }) >= 0;
 }
 
 function isExternal(module, options) {
-  options = _.merge({
-    privatePattern: false
-  }, options);
   var userRequest = module.userRequest;
   if (typeof(userRequest) !== 'string') {
     return false;
   }
-  return /node_modules/.test(userRequest) && (options.privatePattern ? !isPrivate(userRequest, options.privatePattern) : true);
+  options = _.merge({
+    privatePattern: false,
+    smartDetection: false
+  }, options);
+  if (!packages) {
+    packages = getPackages(options);
+  }
+  return /node_modules/.test(userRequest) && !isPrivate(userRequest, options);
 }
 
-module.exports = isExternal;
+module.exports = {
+  getPackages: getPackages,
+  isExternal: isExternal
+}
