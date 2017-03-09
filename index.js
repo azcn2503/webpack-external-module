@@ -3,6 +3,7 @@ var _ = require('lodash');
 
 var packages = null;
 var parentDir = path.dirname(module.parent.filename);
+var packagesJson = require(path.resolve(parentDir, 'package.json'));
 
 var DEFAULT_OPTIONS = {
   privatePattern: false,
@@ -11,21 +12,23 @@ var DEFAULT_OPTIONS = {
 
 function getPackages(options) {
   options = _.merge(DEFAULT_OPTIONS, options);
-  var packagesJson = require(path.resolve(parentDir, 'package.json'));
   var packages = _.merge(packagesJson.dependencies, packagesJson.devDependencies);
   packages = _.map(packages, function(val, key) {
+    var packagePath = path.resolve(parentDir, 'node_modules', key);
     return {
       name: key,
       version: val,
+      path: packagePath,
+      json: require(path.resolve(packagePath, 'package.json')),
       isPrivate: false
     };
   });
-  var enrich = false;
-  if (options.privatePattern) {
-    enrich = true;
-  }
+  packages = enrichPrivatePackages(packages, options);
+  return packages;
+}
+
+function enrichPrivatePackages(packages, options) {
   if (options.smartDetection) {
-    enrich = true;
     // Map options to objects containing a key (the name of the property we want
     // to check) and a value (a regular expression built from the property
     // value found in the module parent's package.json)
@@ -45,33 +48,20 @@ function getPackages(options) {
     }), function(option) {
       return option !== null;
     });
-  }
-  if (enrich) {
-    // Enrich the packages with an isPrivate flag if necessary
-    packages = enrichPrivatePackages(packages, options);
-  }
-  return packages;
-}
-
-function enrichPrivatePackages(packages, options) {
-  if (options.smartDetection) {
-    // Run smart detection rules on each package and set isPrivate to true if
-    // any rules evaluate to true
     _.each(packages, function(package) {
       // Load the package.json for this package
-      var packageJson = require(path.resolve(parentDir, 'node_modules', package.name, 'package.json'));
       _.each(options.smartDetection, function(option) {
-        if (option.value.test(_.get(packageJson, option.key))) {
+        if (option.value.test(_.get(package.json, option.key))) {
           package.isPrivate = true;
         }
       });
     });
   }
   if (options.privatePattern) {
-    // Test the package name for the privatePattern and set isPrivate to true if
-    // any rules evaluate to true
     _.each(packages, function(package) {
-      package.isPrivate = options.privatePattern.test(package.name);
+      if (options.privatePattern.test(package.path)) {
+        package.isPrivate = true;
+      }
     });
   }
   return packages;

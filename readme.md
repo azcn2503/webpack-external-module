@@ -19,7 +19,9 @@ new webpack.optimize.CommonsChunkPlugin({
   name: "vendor",
   filename: "[name]-bundle.js",
   minChunks: function(module) {
-    return webpackExternalModule.isExternal(module);
+    return webpackExternalModule.isExternal(module, {
+      smartDetection: false
+    });
   }
 })
 ```
@@ -32,12 +34,12 @@ new webpack.optimize.CommonsChunkPlugin({
   filename: "[name]-bundle.js",
   minChunks: function(module) {
     return webpackExternalModule.isExternal(module, {
-      privatePattern: /node_modules\/(mycompanyname|mypackagename)\//
+      privatePattern: /node_modules\/(package1|package2)\//
     });
   }
 })
 ```
-This will split every module excluding those matching the `privatePattern` rule in to a bundle. This is a great way to keep your own modules in your non-vendor bundles.
+This will split every module excluding those matching the `privatePattern` rule in to a bundle. This is a great way to keep your own modules in your non-vendor bundles. `privatePattern` is tested against the full path of the module.
 
 ###Use smart detection to detect external modules
 ```js
@@ -52,3 +54,5 @@ new webpack.optimize.CommonsChunkPlugin({
 })
 ```
 If the module contains a `package.json` where the `author.name` is the same as the app being built by Webpack, it will be flagged as a private package and not included in the bundle.
+
+Note that `smartDetection` defaults to `["author.name", "author.email"]`, and will flag a module as private if any of the conditions pass.
