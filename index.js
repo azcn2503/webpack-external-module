@@ -4,11 +4,13 @@ var _ = require('lodash');
 var packages = null;
 var parentDir = path.dirname(module.parent.filename);
 
+var DEFAULT_OPTIONS = {
+  privatePattern: false,
+  smartDetection: ['author.name', 'author.email']
+};
+
 function getPackages(options) {
-  options = _.merge({
-    privatePattern: false,
-    smartDetection: false
-  }, options);
+  options = _.merge(DEFAULT_OPTIONS, options);
   var packagesJson = require(path.resolve(parentDir, 'package.json'));
   var packages = _.merge(packagesJson.dependencies, packagesJson.devDependencies);
   packages = _.map(packages, function(val, key) {
@@ -78,10 +80,7 @@ function isExternal(module, options) {
   if (typeof(userRequest) !== 'string') {
     return false;
   }
-  options = _.merge({
-    privatePattern: false,
-    smartDetection: false
-  }, options);
+  options = _.merge(DEFAULT_OPTIONS, options);
   if (!packages) {
     packages = getPackages(options);
   }
