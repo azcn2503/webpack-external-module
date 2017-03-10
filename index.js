@@ -20,7 +20,8 @@ function getPackages(options) {
       version: val,
       path: packagePath,
       json: require(path.resolve(packagePath, 'package.json')),
-      isPrivate: false
+      isPrivate: false,
+      reasons: []
     };
   });
   packages = enrichPrivatePackages(packages, options);
@@ -52,19 +53,32 @@ function enrichPrivatePackages(packages, options) {
       // Load the package.json for this package
       _.each(options.smartDetection, function(option) {
         if (option.value.test(_.get(package.json, option.key))) {
-          package.isPrivate = true;
+          makePrivate(package, "Matched smartDetection expression on " + option.key + ": " + option.value);
         }
       });
     });
   }
   if (options.privatePattern) {
     _.each(packages, function(package) {
-      if (options.privatePattern.test(package.path)) {
-        package.isPrivate = true;
+      if (options.privatePattern instanceof RegExp) {
+        if (options.privatePattern.test(package.path)) {
+          makePrivate(package, "Matched privatePattern expression on path: " + options.privatePattern);
+        }
+      } else if (typeof(options.privatePattern) === 'object') {
+        _.each(options.privatePattern, function(val, key) {
+          if (val.test(package[key])) {
+            makePrivate(package, "Matched privatePattern expression on " + key + ": " + val);
+          }
+        });
       }
     });
   }
   return packages;
+}
+
+function makePrivate(package, reason) {
+  package.isPrivate = true;
+  package.reasons.push(reason);
 }
 
 function isPrivate(userRequest, options) {
