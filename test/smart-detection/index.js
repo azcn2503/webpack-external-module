@@ -1,72 +1,86 @@
-var assert = require('assert');
+const assert = require('assert');
+const path = require('path');
 
-var wem = require('../../');
+const wem = require('require-no-cache')('../../');
+const parentPath = path.resolve(__dirname);
 
-module.exports.initialise = function() {
-  describe('fake-owned-package-name', function() {
-    it('flags as private on default options', function() {
-      var packages = wem.getPackages();
+module.exports.initialise = () => {
+  describe('fake-owned-package-name', () => {
+    it('flags as private on default options', () => {
+      const packages = wem.getPackages({
+        path: parentPath
+      });
       assert.equal(true, packages[0].isPrivate);
     });
 
-    it('flags as private on author.name', function() {
-      var packages = wem.getPackages({
+    it('flags as private on author.name', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.name']
       });
       assert.equal(true, packages[0].isPrivate);
     });
 
-    it('flags as private on author.email', function() {
-      var packages = wem.getPackages({
+    it('flags as private on author.email', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.email']
       });
       assert.equal(true, packages[0].isPrivate);
     });
 
-    it('flags as public on an unknown property', function() {
-      var packages = wem.getPackages({
+    it('flags as public on an unknown property', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.unknown']
       });
       assert.equal(false, packages[0].isPrivate);
     });
 
-    it('flags as public when disabled', function() {
-      var packages = wem.getPackages({
+    it('flags as public when disabled', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: false
       });
       assert.equal(false, packages[0].isPrivate);
     });
   });
 
-  describe("fake-public-package-name", function() {
-    it('flags as public on default options', function() {
-      var packages = wem.getPackages({});
+  describe("fake-public-package-name", () => {
+    it('flags as public on default options', () => {
+      const packages = wem.getPackages({
+        path: parentPath
+      });
       assert.equal(false, packages[1].isPrivate);
     });
 
-    it('flags as public on author.name', function() {
-      var packages = wem.getPackages({
+    it('flags as public on author.name', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.name']
       });
       assert.equal(false, packages[1].isPrivate);
     });
 
-    it('flags as public on author.email', function() {
-      var packages = wem.getPackages({
+    it('flags as public on author.email', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.email']
       });
       assert.equal(false, packages[1].isPrivate);
     });
 
-    it('flags as public on an unknown property', function() {
-      var packages = wem.getPackages({
+    it('flags as public on an unknown property', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: ['author.unknown']
       });
       assert.equal(false, packages[1].isPrivate);
     });
 
-    it('flags as public when disabled', function() {
-      var packages = wem.getPackages({
+    it('flags as public when disabled', () => {
+      const packages = wem.getPackages({
+        path: parentPath,
         smartDetection: false
       });
       assert.equal(false, packages[1].isPrivate);
