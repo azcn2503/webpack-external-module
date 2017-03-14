@@ -1,0 +1,12 @@
+{
+  "name": "fake-package-name",
+  "version": "0.0.1",
+  "author": {
+    "name": "Owner",
+    "email": "owner@owner.com"
+  },
+  "dependencies": {
+    "fake-owned-package-name": "0.0.1",
+    "fake-public-package-name": "0.0.1"
+  }
+}

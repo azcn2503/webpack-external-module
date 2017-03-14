@@ -1,30 +1,35 @@
 var path = require('path');
 var _ = require('lodash');
 
-var packages = null;
-var parentDir = path.dirname(module.parent.filename);
-var packagesJson = require(path.resolve(parentDir, 'package.json'));
-
 var DEFAULT_OPTIONS = {
   privatePattern: false,
-  smartDetection: ['author.name', 'author.email']
+  smartDetection: ['author.name', 'author.email'],
+  packageJson: null
 };
 
 function getPackages(options) {
-  options = _.merge(DEFAULT_OPTIONS, options);
-  var packages = _.merge(packagesJson.dependencies, packagesJson.devDependencies);
+  var parentDir = path.dirname(module.parent.filename);
+  var packageJson = require(path.resolve(parentDir, 'package.json'));
+  options = _.assign({}, DEFAULT_OPTIONS, options, {
+    parentDir: parentDir,
+    packageJson: packageJson
+  });
+  var packages = _.assign({}, packageJson.dependencies, packageJson.devDependencies);
   packages = _.map(packages, function(val, key) {
-    var packagePath = path.resolve(parentDir, 'node_modules', key);
-    return {
-      name: key,
-      version: val,
-      path: packagePath,
-      json: require(path.resolve(packagePath, 'package.json')),
-      isPrivate: false,
-      reasons: []
-    };
+    if (typeof(key) === 'string') {
+      var packagePath = path.resolve(parentDir, 'node_modules', key);
+      return {
+        name: key,
+        version: val,
+        path: packagePath,
+        json: require(path.resolve(packagePath, 'package.json')),
+        isPrivate: false,
+        reasons: []
+      };
+    }
   });
   packages = enrichPrivatePackages(packages, options);
+
   return packages;
 }
 
@@ -37,18 +42,21 @@ function enrichPrivatePackages(packages, options) {
     // ["author.name"]
     // becomes
     // [{ key: "author.name", value: /Joe Bloggs/i }]
-    options.smartDetection = _.filter(_.map(options.smartDetection, function(option) {
-      if (_.has(packagesJson, option)) {
-        return {
-          key: option,
-          value: new RegExp(_.get(packagesJson, option), 'i')
-        };
-      } else {
-        return null;
-      }
-    }), function(option) {
-      return option !== null;
-    });
+    options.smartDetection = _.chain(options.smartDetection)
+      .map(function(option) {
+        if (_.has(options.packageJson, option)) {
+          return {
+            key: option,
+            value: new RegExp(_.get(options.packageJson, option), 'i')
+          };
+        } else {
+          return null;
+        }
+      })
+      .filter(function(option) {
+        return option !== null;
+      })
+      .value();
     _.each(packages, function(package) {
       // Load the package.json for this package
       _.each(options.smartDetection, function(option) {
@@ -87,7 +95,7 @@ function isPrivate(userRequest, options) {
     // are not specified in the options
     return false;
   }
-  return _.findIndex(_.values(packages), function(package) {
+  return _.findIndex(_.values(options.packages), function(package) {
     if (new RegExp('node_modules\/' + package.name).test(userRequest)) {
       return package.isPrivate;
     }
@@ -100,15 +108,13 @@ function isExternal(module, options) {
   if (typeof(userRequest) !== 'string') {
     return false;
   }
-  options = _.merge(DEFAULT_OPTIONS, options);
-  if (!packages) {
-    // Set the global packages if they haven't already been worked out manually
-    packages = getPackages(options);
-  }
+  options = _.assign({}, DEFAULT_OPTIONS, options);
+  var packages = getPackages(options);
+  options.packages = packages;
   return /node_modules/.test(userRequest) && !isPrivate(userRequest, options);
 }
 
 module.exports = {
   getPackages: getPackages,
   isExternal: isExternal
-}
+};
