@@ -1,5 +1,7 @@
 # Webpack External Module Plugin
 
+[![Build Status](https://travis-ci.org/azcn2503/webpack-external-module.svg?branch=master)](https://travis-ci.org/azcn2503/webpack-external-module)
+
 A handy way to create a vendor bundle for your Webpack build process.
 
 Webpack does not know about what is "external" and what is "private", so we need to tell it.
