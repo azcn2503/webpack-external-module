@@ -56,25 +56,25 @@ function enrichPrivatePackages(packages, options) {
         return option !== null;
       })
       .value();
-    _.each(packages, package => {
+    _.each(packages, pkg => {
       // Load the package.json for this package
       _.each(options.smartDetection, option => {
-        if (option.value.test(_.get(package.json, option.key))) {
-          makePrivate(package, "Matched smartDetection expression on " + option.key + ": " + option.value);
+        if (option.value.test(_.get(pkg.json, option.key))) {
+          makePrivate(pkg, "Matched smartDetection expression on " + option.key + ": " + option.value);
         }
       });
     });
   }
   if (options.privatePattern) {
-    _.each(packages, package => {
+    _.each(packages, pkg => {
       if (options.privatePattern instanceof RegExp) {
-        if (options.privatePattern.test(package.path)) {
-          makePrivate(package, "Matched privatePattern expression on path: " + options.privatePattern);
+        if (options.privatePattern.test(pkg.path)) {
+          makePrivate(pkg, "Matched privatePattern expression on path: " + options.privatePattern);
         }
       } else if (typeof(options.privatePattern) === 'object') {
         _.each(options.privatePattern, (val, key) => {
-          if (val.test(package[key])) {
-            makePrivate(package, "Matched privatePattern expression on " + key + ": " + val);
+          if (val.test(pkg[key])) {
+            makePrivate(pkg, "Matched privatePattern expression on " + key + ": " + val);
           }
         });
       }
@@ -83,9 +83,9 @@ function enrichPrivatePackages(packages, options) {
   return packages;
 }
 
-function makePrivate(package, reason) {
-  package.isPrivate = true;
-  package.reasons.push(reason);
+function makePrivate(pkg, reason) {
+  pkg.isPrivate = true;
+  pkg.reasons.push(reason);
 }
 
 function isPrivate(userRequest, options) {
@@ -94,9 +94,9 @@ function isPrivate(userRequest, options) {
     // are not specified in the options
     return false;
   }
-  return _.findIndex(_.values(options.packages), package => {
-    if (new RegExp('node_modules\/' + package.name).test(userRequest)) {
-      return package.isPrivate;
+  return _.findIndex(_.values(options.packages), pkg => {
+    if (new RegExp('node_modules\/' + pkg.name).test(userRequest)) {
+      return pkg.isPrivate;
     }
   }) >= 0;
 }
